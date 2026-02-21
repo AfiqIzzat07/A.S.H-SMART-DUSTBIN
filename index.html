@@ -1,106 +1,19 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Smart Dustbin Dashboard</title>
+<title>Smart Dustbin</title>
 <link rel="manifest" href="manifest.json">
-<style>
-  body {
-    font-family: sans-serif;
-    background: #111;
-    color: #fff;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: flex-start;
-    min-height: 100vh;
-    padding: 20px;
-  }
-
-  h1 {
-    margin-bottom: 20px;
-  }
-
-  .status-box {
-    background: #222;
-    border-radius: 12px;
-    padding: 20px;
-    margin-bottom: 20px;
-    width: 100%;
-    max-width: 400px;
-    text-align: center;
-  }
-
-  .status-box p {
-    margin: 10px 0;
-    font-size: 1.2em;
-  }
-
-  button {
-    padding: 12px 24px;
-    margin: 10px;
-    border: none;
-    border-radius: 12px;
-    cursor: pointer;
-    background: #00ffae;
-    color: #000;
-    font-weight: bold;
-    font-size: 1em;
-    transition: 0.2s;
-  }
-
-  button:hover {
-    background: #00cc88;
-  }
-</style>
 </head>
 <body>
+<h1>SMART DUSTBIN</h1>
 
-<h1>Smart Dustbin Dashboard</h1>
+<p id="status">Loading...</p>
+<p id="percent">--%</p>
 
-<div class="status-box">
-  <p id="fullness">Fullness: -- %</p>
-  <p id="status">Status: --</p>
-</div>
+<button onclick="send('OPEN')">OPEN</button>
+<button onclick="send('CLOSE')">CLOSE</button>
 
-<div>
-  <button onclick="sendServo('OPEN')">Open Lid</button>
-  <button onclick="sendServo('CLOSE')">Close Lid</button>
-</div>
-
-<script>
-  // Firebase Realtime Database URL
-  const databaseUrl = "https://smart-dustbin-150307-default-rtdb.asia-southeast1.firebasedatabase.app";
-
-  // Fetch and display fullness & status every 3 seconds
-  async function fetchStatus(){
-    try {
-      const res = await fetch(`${databaseUrl}/dustbin.json`);
-      const data = await res.json();
-      if(data){
-        document.getElementById("fullness").textContent = "Fullness: " + data.fullness + "%";
-        document.getElementById("status").textContent = "Status: " + data.status;
-      }
-    } catch(err){
-      console.error("Error fetching status:", err);
-    }
-  }
-  fetchStatus();
-  setInterval(fetchStatus, 3000);
-
-  // Send command to open/close lid
-  async function sendServo(cmd){
-    try {
-      await fetch(`${databaseUrl}/dustbin/servo.json`, {
-        method: "PUT",
-        body: JSON.stringify(cmd)
-      });
-    } catch(err){
-      console.error("Error sending servo command:", err);
-    }
-  }
-</script>
-
+<script src="app.js"></script>
 </body>
 </html>
