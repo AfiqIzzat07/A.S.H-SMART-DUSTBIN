@@ -6,7 +6,7 @@ export async function handler() {
     "🚨 SMART DUSTBIN ALERT\n\n" +
     "Status: FULL\n" +
     "Please clear the bin.\n\n" +
-    "👉 Open dashboard:\nhttps://smartdustbin-ash.netlify.app/";
+    "👉 Open dashboard:\nhttps://smartdustbin-ash.netlify.app";
 
   await fetch(`https://api.telegram.org/bot${BOT}/sendMessage`, {
     method: "POST",
