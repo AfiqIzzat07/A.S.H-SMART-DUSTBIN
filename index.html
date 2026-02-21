@@ -1,49 +1,120 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Smart Dustbin</title>
-  <style>
-    body { font-family: Arial; text-align: center; background: #f4f4f4; }
-    .card { background: white; padding: 20px; margin: 40px auto; width: 300px; border-radius: 12px; }
-    button { padding: 12px 20px; font-size: 16px; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Smart Dustbin Dashboard</title>
+<link rel="manifest" href="manifest.json">
+<style>
+body {margin:0; font-family: 'Poppins', sans-serif; background:#111; color:#fff; display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:100vh;}
+.header {font-size:1.5em; margin:20px; font-weight:600;}
+.card {background: rgba(255,255,255,0.05); padding:30px; border-radius:20px; text-align:center; backdrop-filter:blur(20px);}
+.progress-container {position:relative; width:200px; height:200px; margin:auto;}
+svg {transform: rotate(-90deg);}
+circle {fill:none; stroke-width:15; stroke-linecap:round;}
+.bg {stroke: rgba(255,255,255,0.1);}
+.progress {stroke:#00ffae; stroke-dasharray:565; stroke-dashoffset:565; transition:1s ease;}
+.percentage {position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); font-size:2.5em;}
+.status-container {display:flex; align-items:center; justify-content:center; gap:10px; margin-top:15px;}
+.indicator {width:20px; height:20px; border-radius:50%; background:green; box-shadow:0 0 15px green;}
+button.servo-btn {margin:10px; padding:10px 20px; font-size:1em; font-weight:600; border-radius:10px; border:none; cursor:pointer; background:#00ffae; color:#000;}
+</style>
 </head>
-
 <body>
-  <div class="card">
-    <h2>🗑️ Smart Dustbin</h2>
-    <h3 id="percent">--%</h3>
-    <p id="status">Loading...</p>
-    <button onclick="forceOpen()">Force Open (Cleaner)</button>
+<div class="header">SMART DUSTBIN DASHBOARD</div>
+<div class="card">
+  <h2>🗑 Block A</h2>
+  <div class="progress-container">
+    <svg width="200" height="200">
+      <circle class="bg" cx="100" cy="100" r="90"></circle>
+      <circle class="progress" cx="100" cy="100" r="90"></circle>
+    </svg>
+    <div class="percentage" id="percentage">0%</div>
   </div>
+  <div class="status-container">
+    <div class="indicator" id="indicator"></div>
+    <div class="status" id="status">Loading...</div>
+  </div>
+  <div class="time" id="time">Last update: --</div>
+  <div class="servo-controls">
+    <button class="servo-btn" id="openBtn">Open Lid</button>
+    <button class="servo-btn" id="closeBtn">Close Lid</button>
+  </div>
+</div>
 
 <script type="module">
+// Firebase config
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js";
-import { getDatabase, ref, onValue, set }
-from "https://www.gstatic.com/firebasejs/12.9.0/firebase-database.js";
+import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-database.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBD990zggrFpi5Z2DwAOLShTjJUDN8ydBo",
   authDomain: "smart-dustbin-150307.firebaseapp.com",
   databaseURL: "https://smart-dustbin-150307-default-rtdb.asia-southeast1.firebasedatabase.app",
   projectId: "smart-dustbin-150307",
+  storageBucket: "smart-dustbin-150307.firebasestorage.app",
+  messagingSenderId: "470186830441",
+  appId: "1:470186830441:web:9355f4e1c10e498b26d0f8"
 };
-
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
-const percentEl = document.getElementById("percent");
+// Elements
+const progressCircle = document.querySelector(".progress");
+const percentageEl = document.getElementById("percentage");
 const statusEl = document.getElementById("status");
+const timeEl = document.getElementById("time");
+const indicator = document.getElementById("indicator");
 
-onValue(ref(db, "/bin"), snap => {
-  const d = snap.val();
-  percentEl.innerText = d.percentage + "%";
-  statusEl.innerText = d.full ? "🚨 BIN FULL" : "✅ NOT FULL";
+// Circle setup
+const radius = 90;
+const circumference = 2 * Math.PI * radius;
+progressCircle.style.strokeDasharray = circumference;
+
+// Firebase refs
+const fullnessRef = ref(db, "/dustbin/fullness");
+const servoRef = ref(db, "/dustbin/servo");
+
+// Update UI
+function updateUI(percent){
+  const offset = circumference - (percent/100)*circumference;
+  progressCircle.style.strokeDashoffset = offset;
+  percentageEl.textContent = percent + "%";
+  let color, msg;
+  if(percent >= 80){ color="#ff0000"; msg="🚨 FULL"; } 
+  else if(percent>=50){ color="#ffcc00"; msg="⚠️ Getting Full"; }
+  else { color="#00ffae"; msg="✅ Not Full"; }
+  progressCircle.style.stroke=color;
+  indicator.style.background=color;
+  indicator.style.boxShadow=`0 0 20px ${color}`;
+  statusEl.textContent=msg;
+  timeEl.textContent="Last update: "+new Date().toLocaleTimeString();
+}
+
+// Listen for updates
+onValue(fullnessRef, snap=>{ if(snap.val()!=null) updateUI(snap.val()); });
+
+// Servo buttons
+document.getElementById("openBtn").addEventListener("click", ()=>{
+  set(servoRef,"OPEN");
+  fetch("/.netlify/functions/send-telegram", {
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({message:"Cleaner opened the lid manually"})
+  });
 });
+document.getElementById("closeBtn").addEventListener("click", ()=>{
+  set(servoRef,"CLOSE");
+});
+</script>
 
-window.forceOpen = () => {
-  set(ref(db, "/bin/forceOpen"), true);
-};
+<script>
+// PWA Service Worker
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('/sw.js')
+    .then(reg=>console.log("SW registered", reg))
+    .catch(err=>console.log("SW error", err));
+}
 </script>
 </body>
 </html>
