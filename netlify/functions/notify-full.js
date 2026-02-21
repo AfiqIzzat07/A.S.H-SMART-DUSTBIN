@@ -1,23 +1,20 @@
-// netlify/functions/notify-full.js
-const fetch = require("node-fetch");
+exports.handler = async (event) => {
+  try {
+    const body = event.body ? JSON.parse(event.body) : {};
+    const message = body.message || "🚨 A dustbin is FULL!";
 
-exports.handler = async () => {
-  const FIREBASE_URL = "https://smart-dustbin-150307-default-rtdb.asia-southeast1.firebasedatabase.app/dustbin/fullness.json";
-  const TELEGRAM_BOT_TOKEN = process.env.BOT_TOKEN;
-  const TELEGRAM_CHAT_ID  = process.env.CHAT_ID;
+    const token = process.env.BOT_TOKEN;
+    const chatId = process.env.CHAT_ID;
 
-  // Get current fullness from Firebase
-  const res = await fetch(FIREBASE_URL);
-  const fullness = await res.json();
+    const url = `https://api.telegram.org/bot${token}/sendMessage?chat_id=${chatId}&text=${encodeURIComponent(message)}\n\n👉 Check dashboard: https://smartdustbin-ash.netlify.app/`;
 
-  if(fullness >= 80){
-    // send telegram
-    const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage?chat_id=${TELEGRAM_CHAT_ID}&text=🚨 Block A Dustbin is FULL! Check dashboard: https://YOUR_NETLIFY_SITE.netlify.app/`;
-    const send = await fetch(url);
-    const data = await send.json();
-    console.log("Telegram result:", data);
-    return { statusCode: 200, body: JSON.stringify(data) };
+    const res = await fetch(url);
+    const data = await res.json();
+    console.log("Telegram response:", data);
+
+    return { statusCode: 200, body: JSON.stringify({ success: true, telegram: data }) };
+  } catch (err) {
+    console.error("Error sending Telegram:", err);
+    return { statusCode: 500, body: JSON.stringify({ success: false, error: err.message }) };
   }
-
-  return { statusCode: 200, body: "Not full" };
 };
