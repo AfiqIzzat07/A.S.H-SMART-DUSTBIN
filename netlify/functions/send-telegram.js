@@ -2,7 +2,7 @@ exports.handler = async (event) => {
   const body = JSON.parse(event.body);
   const text =
     body.message +
-    "\n\n👉 Open dashboard:\nhttps://YOUR_SITE.netlify.app";
+    "\n\n👉 Open dashboard:\nhttps://smartdustbin-ash.netlify.app/";
 
   const token = process.env.BOT_TOKEN;
   const chat = process.env.CHAT_ID;
