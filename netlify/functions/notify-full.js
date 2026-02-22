@@ -1,38 +1,35 @@
 // notify-full.js
-export async function handler(event, context) {
-  // Only handle POST requests (from Firebase webhook or ESP32)
-  if (event.httpMethod !== "POST") {
-    return { statusCode: 405, body: "Method Not Allowed" };
-  }
+import fetch from "node-fetch"; // if using Node 18+, you can skip this
+
+export const handler = async (event, context) => {
+  // Firebase RTDB POST from ESP32 sets /dustbin/notifyFull = true
+  // We'll use a Firebase webhook or periodically check the value from ESP
+  const TELEGRAM_BOT_TOKEN = process.env.BOT_TOKEN;
+  const CHAT_ID = process.env.CHAT_ID;
+
+  const message = "🚨 Block A Dustbin is FULL!\nCheck dashboard: https://smartdustbin-ash.netlify.app/";
 
   try {
-    const body = JSON.parse(event.body);
-
-    // Expecting body to contain a message string
-    const message =
-      body.message ||
-      "🚨 Dustbin is FULL!\nCheck dashboard: https://YOUR_SITE.netlify.app";
-
-    const token = process.env.BOT_TOKEN;
-    const chat = process.env.CHAT_ID;
-
-    // Use global fetch (Node 18+ on Netlify)
-    const res = await fetch(
-      `https://api.telegram.org/bot${token}/sendMessage`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ chat_id: chat, text: message }),
-      }
-    );
+    // Send Telegram message
+    const res = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ chat_id: CHAT_ID, text: message })
+    });
 
     const data = await res.json();
+    console.log("Telegram sent:", data);
 
+    // Reset notifyFull flag in Firebase (optional: do this via ESP or separate webhook)
     return {
       statusCode: 200,
-      body: JSON.stringify({ success: true, telegramResponse: data }),
+      body: JSON.stringify({ success: true, data })
     };
   } catch (err) {
-    return { statusCode: 500, body: "Error: " + err.message };
+    console.error("Telegram send error:", err);
+    return {
+      statusCode: 500,
+      body: JSON.stringify({ success: false, error: err.message })
+    };
   }
-}
+};
