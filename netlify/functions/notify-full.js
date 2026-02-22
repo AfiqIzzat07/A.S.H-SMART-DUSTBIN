@@ -1,18 +1,38 @@
-export async function handler() {
-  const BOT = process.env.BOT_TOKEN;
-  const CHAT = process.env.CHAT_ID;
+// notify-full.js
+export async function handler(event, context) {
+  // Only handle POST requests (from Firebase webhook or ESP32)
+  if (event.httpMethod !== "POST") {
+    return { statusCode: 405, body: "Method Not Allowed" };
+  }
 
-  const text =
-    "🚨 SMART DUSTBIN ALERT\n\n" +
-    "Status: FULL\n" +
-    "Please clear the bin.\n\n" +
-    "👉 Open dashboard:\nhttps://smartdustbin-ash.netlify.app";
+  try {
+    const body = JSON.parse(event.body);
 
-  await fetch(`https://api.telegram.org/bot${BOT}/sendMessage`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ chat_id: CHAT, text })
-  });
+    // Expecting body to contain a message string
+    const message =
+      body.message ||
+      "🚨 Dustbin is FULL!\nCheck dashboard: https://YOUR_SITE.netlify.app";
 
-  return { statusCode: 200, body: "sent" };
+    const token = process.env.BOT_TOKEN;
+    const chat = process.env.CHAT_ID;
+
+    // Use global fetch (Node 18+ on Netlify)
+    const res = await fetch(
+      `https://api.telegram.org/bot${token}/sendMessage`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ chat_id: chat, text: message }),
+      }
+    );
+
+    const data = await res.json();
+
+    return {
+      statusCode: 200,
+      body: JSON.stringify({ success: true, telegramResponse: data }),
+    };
+  } catch (err) {
+    return { statusCode: 500, body: "Error: " + err.message };
+  }
 }
